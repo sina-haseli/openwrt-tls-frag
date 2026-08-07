@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-$files = git ls-files | Where-Object { $_ -notmatch '^(reference/)' }
+$files = git ls-files | Where-Object { $_ -notmatch '^reference/' }
 
 ssh "root@$Router" "rm -rf '$Dest'; mkdir -p '$Dest'"
 

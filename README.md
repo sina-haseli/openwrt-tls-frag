@@ -54,7 +54,7 @@ Xray is not bundled. Install it first: `apk add xray-core` (or
 ## Install
 
 ```sh
-git clone https://github.com/<you>/openwrt-tls-frag
+git clone https://github.com/sina-haseli/openwrt-tls-frag
 cd openwrt-tls-frag
 ./install.sh
 ```

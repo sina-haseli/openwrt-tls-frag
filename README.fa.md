@@ -54,7 +54,7 @@ Passwall2، حالت مستقل (transparent proxy)، و راستی‌آزمای
 ## نصب
 
 ```sh
-git clone https://github.com/<you>/openwrt-tls-frag
+git clone https://github.com/sina-haseli/openwrt-tls-frag
 cd openwrt-tls-frag
 ./install.sh
 ```

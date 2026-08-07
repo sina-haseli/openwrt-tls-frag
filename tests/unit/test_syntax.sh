@@ -3,7 +3,7 @@
 set -u
 . "$ROOT/tests/lib/assert.sh"
 
-FILES="install.sh uninstall.sh
+FILES="install.sh uninstall.sh get.sh
 lib/common.sh lib/core.sh lib/verify.sh lib/mode_passwall2.sh lib/mode_standalone.sh
 files/etc/init.d/xray-frag files/usr/bin/xray-frag-stats"
 

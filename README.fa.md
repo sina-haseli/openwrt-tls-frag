@@ -53,18 +53,40 @@ Passwall2، حالت مستقل (transparent proxy)، و راستی‌آزمای
 
 ## نصب
 
+فقط یک خط، روی خود روتر و با کاربر root:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh | sh
+```
+
+به‌صورت خودکار تشخیص می‌دهد: اگر Passwall2 نصب باشد از آن استفاده می‌کند، وگرنه
+حالت مستقل. برای انتخاب دستیِ حالت، آرگومان‌ها را بعد از `-s --` بدهید:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh | sh -s -- --mode passwall2
+curl -fsSL https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh | sh -s -- --mode standalone
+```
+
+این اسکریپت یک آرشیو tar را در `/tmp` (که در رم است) دانلود می‌کند، نصب‌کننده را
+اجرا می‌کند و بعد خودش را پاک می‌کند؛ یعنی هیچ چیز اضافه‌ای روی حافظهٔ فلش نوشته
+نمی‌شود. روی OpenWrt اصلاً `git` نصب نیست و به همین دلیل به‌جای clone از tarball
+استفاده می‌شود.
+
+اگر ترجیح می‌دهید قبل از اجرا کد را بخوانید — که کار درست همین است — اول دانلود و
+بررسی کنید:
+
+```sh
+curl -fsSL -o /tmp/get.sh https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh
+less /tmp/get.sh
+sh /tmp/get.sh
+```
+
+یا روی سیستمی که `git` دارد:
+
 ```sh
 git clone https://github.com/sina-haseli/openwrt-tls-frag
 cd openwrt-tls-frag
 ./install.sh
-```
-
-دستور `./install.sh` به‌صورت خودکار تشخیص می‌دهد: اگر Passwall2 نصب باشد از آن
-استفاده می‌کند، وگرنه حالت مستقل. برای انتخاب دستی:
-
-```sh
-./install.sh --mode passwall2
-./install.sh --mode standalone
 ```
 
 گزینه‌ها:
@@ -123,6 +145,15 @@ verify: PASS - fragmentation is doing the work
 در حالی که از روی VPN رفته است.
 
 ## حذف نصب
+
+اگر با دستور تک‌خطی نصب کرده‌اید، نسخه‌ای از پروژه روی روتر باقی نمانده؛ از همان
+اسکریپت استفاده کنید:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh | sh -s -- --uninstall
+```
+
+از روی یک clone:
 
 ```sh
 ./uninstall.sh

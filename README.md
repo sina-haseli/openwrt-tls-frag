@@ -53,18 +53,39 @@ Xray is not bundled. Install it first: `apk add xray-core` (or
 
 ## Install
 
+One line, on the router, as root:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh | sh
+```
+
+It auto-detects: Passwall2 if present, standalone otherwise. To force a mode,
+pass arguments after `-s --`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh | sh -s -- --mode passwall2
+curl -fsSL https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh | sh -s -- --mode standalone
+```
+
+The bootstrap downloads a tarball into `/tmp` (tmpfs), runs the installer, and
+deletes itself — nothing is written to flash except the installed files.
+OpenWrt has no `git`, which is why this fetches a tarball rather than cloning.
+
+If you would rather read the code before running it — and you should — download
+and inspect it first:
+
+```sh
+curl -fsSL -o /tmp/get.sh https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh
+less /tmp/get.sh
+sh /tmp/get.sh
+```
+
+Or on a machine that does have `git`:
+
 ```sh
 git clone https://github.com/sina-haseli/openwrt-tls-frag
 cd openwrt-tls-frag
 ./install.sh
-```
-
-`./install.sh` auto-detects: Passwall2 if present, standalone otherwise. To force
-a mode:
-
-```sh
-./install.sh --mode passwall2
-./install.sh --mode standalone
 ```
 
 Options:
@@ -120,6 +141,15 @@ Passwall2 router a "direct" fetch of youtube.com returns 200 while riding the
 VPN.
 
 ## Uninstall
+
+If you installed with the one-liner, you have no local copy — use the same
+bootstrap:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sina-haseli/openwrt-tls-frag/master/get.sh | sh -s -- --uninstall
+```
+
+From a clone:
 
 ```sh
 ./uninstall.sh

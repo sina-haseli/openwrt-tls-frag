@@ -1,0 +1,42 @@
+{
+  "log": { "loglevel": "warning" },
+  "dns": {
+    "hosts": { "cloudflare-dns.com": "challenges.cloudflare.com" },
+    "servers": [
+      { "address": "https://cloudflare-dns.com/dns-query", "timeoutMs": 12000 }
+    ],
+    "queryStrategy": "UseIPv4"
+  },
+  "inbounds": [
+    {
+      "tag": "redir-in",
+      "listen": "0.0.0.0",
+      "port": 10809,
+      "protocol": "dokodemo-door",
+      "settings": { "network": "tcp", "followRedirect": true },
+      "sniffing": { "enabled": true, "destOverride": ["tls", "http"], "routeOnly": true }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "frag",
+      "protocol": "direct",
+      "streamSettings": {
+        "finalmask": {
+          "tcp": [
+            { "type": "fragment", "settings": { "packets": "tlshello", "lengths": ["5", "1"], "delays": ["0"], "maxSplit": "0" } },
+            { "type": "fragment", "settings": { "packets": "1-1", "lengths": ["43", "1"], "delays": ["1"], "maxSplit": "522" } }
+          ]
+        },
+        "sockopt": { "mark": 255 }
+      }
+    },
+    { "tag": "dns-out", "protocol": "dns" }
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      { "type": "field", "port": 53, "outboundTag": "dns-out" }
+    ]
+  }
+}

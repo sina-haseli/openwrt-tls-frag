@@ -1,0 +1,120 @@
+#!/bin/sh
+# xray-frag resource monitor
+# Logs to tmpfs (/tmp) on purpose: no disk writes, no SSD wear, auto-clears on reboot.
+
+LOG=/tmp/xray-frag-stats.log
+STATE=/tmp/.xray-frag-stats.prev
+MAXLINES=1440          # ~24h at 1 sample/min (~70 KB in RAM)
+
+pid_of() {
+	ps -w | grep "[x]ray-frag/config.json" | awk '{print $1}' | head -1
+}
+
+# echo: rss_kb threads ticks runtime_s conns
+probe() {
+	PID=$(pid_of)
+	[ -z "$PID" ] && return 1
+	[ -r "/proc/$PID/stat" ] || return 1
+	RSS=$(awk '/^VmRSS:/{print $2}' "/proc/$PID/status" 2>/dev/null)
+	THR=$(awk '/^Threads:/{print $2}' "/proc/$PID/status" 2>/dev/null)
+	TICKS=$(awk '{print $14+$15}' "/proc/$PID/stat" 2>/dev/null)
+	STARTT=$(awk '{print int($22/100)}' "/proc/$PID/stat" 2>/dev/null)
+	UP=$(awk '{print int($1)}' /proc/uptime)
+	RUN=$((UP - STARTT))
+	[ "$RUN" -le 0 ] && RUN=1
+	# Count both the passwall2-mode SOCKS port and the standalone dokodemo port,
+	# otherwise the connection count reads zero in standalone mode.
+	CONNS=$(netstat -tn 2>/dev/null | grep -c -e '127\.0\.0\.1:10808' -e ':10809')
+	echo "$RSS $THR $TICKS $RUN $CONNS"
+}
+
+cmd_now() {
+	set -- $(probe) || true
+	if [ -z "$1" ]; then
+		echo "xray-frag: NOT RUNNING"
+		return 1
+	fi
+	RSS=$1; THR=$2; TICKS=$3; RUN=$4; CONNS=$5
+
+	# instantaneous CPU: sample twice, 2s apart
+	PID=$(pid_of)
+	T1=$(awk '{print $14+$15}' "/proc/$PID/stat")
+	sleep 2
+	T2=$(awk '{print $14+$15}' "/proc/$PID/stat" 2>/dev/null || echo "$T1")
+	NOWCPU=$(( (T2 - T1) * 100 / 200 ))
+
+	AVGCPU=$((TICKS / RUN))
+	CPUSEC=$((TICKS / 100))
+
+	echo "xray-frag  (pid $PID)"
+	echo "  state       : running, up $((RUN/3600))h $(((RUN%3600)/60))m"
+	echo "  memory RSS  : $((RSS/1024)) MB"
+	echo "  threads     : $THR"
+	echo "  cpu now     : ${NOWCPU}%  (of one core)"
+	echo "  cpu average : ${AVGCPU}%  (${CPUSEC}s cpu over $((RUN/60))m)"
+	echo "  open conns  : $CONNS"
+	echo "  disk        : $(du -sh /etc/xray-frag 2>/dev/null | awk '{print $1}') config, 0 log files (logs go to RAM syslog)"
+	echo
+	echo "for comparison (passwall2 cores):"
+	ps -w | grep -E "[p]asswall2/bin/(xray|sing-box)" | while read -r p rest; do
+		r=$(awk '/^VmRSS:/{print $2}' "/proc/$p/status" 2>/dev/null)
+		n=$(echo "$rest" | grep -o '[^/]*\.json' | head -1)
+		[ -n "$r" ] && echo "  pid $p: $((r/1024)) MB   $n"
+	done
+}
+
+cmd_log() {
+	set -- $(probe) || true
+	[ -z "$1" ] && return 0
+	RSS=$1; THR=$2; TICKS=$3; RUN=$4; CONNS=$5
+
+	PREV=$(cat "$STATE" 2>/dev/null)
+	echo "$TICKS $RUN" > "$STATE"
+	PT=$(echo "$PREV" | awk '{print $1}')
+	PR=$(echo "$PREV" | awk '{print $2}')
+	CPU=0
+	if [ -n "$PT" ] && [ -n "$PR" ] && [ "$RUN" -gt "$PR" ]; then
+		CPU=$(( (TICKS - PT) / (RUN - PR) ))
+	fi
+
+	echo "$(date '+%Y-%m-%d %H:%M') cpu=${CPU}% rss=$((RSS/1024))MB thr=$THR conns=$CONNS" >> "$LOG"
+
+	# trim to MAXLINES
+	LINES=$(wc -l < "$LOG" 2>/dev/null || echo 0)
+	if [ "$LINES" -gt "$MAXLINES" ]; then
+		tail -n "$MAXLINES" "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+	fi
+}
+
+cmd_history() {
+	if [ ! -f "$LOG" ]; then
+		echo "no history yet (sampler runs every minute; log lives in RAM and clears on reboot)"
+		return 0
+	fi
+	echo "=== peaks ==="
+	awk '{gsub(/[a-z=%MB]/,"",$3); gsub(/[a-z=%MB]/,"",$4);
+	      if ($3+0>=mc) {mc=$3+0; mct=$1" "$2}
+	      if ($4+0>=mr) {mr=$4+0; mrt=$1" "$2}}
+	     END{printf "  peak cpu : %d%%  at %s\n  peak rss : %d MB  at %s\n  samples  : %d\n", mc, mct, mr, mrt, NR}' "$LOG"
+	echo
+	echo "=== last 20 samples ==="
+	tail -20 "$LOG"
+}
+
+cmd_watch() {
+	while true; do
+		clear
+		cmd_now
+		echo
+		echo "(ctrl-c to quit)"
+		sleep 3
+	done
+}
+
+case "$1" in
+	log)     cmd_log ;;
+	history|hist) cmd_history ;;
+	watch)   cmd_watch ;;
+	now|"")  cmd_now ;;
+	*)       echo "usage: xray-frag-stats [now|history|watch|log]" ;;
+esac

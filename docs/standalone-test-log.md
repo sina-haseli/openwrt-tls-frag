@@ -22,8 +22,8 @@ These are the values actually observed, not the expected ones.
 
 The rest of the LAN kept using the production Passwall2 path throughout.
 
-1. Passwall2 `acl_rule[2]` (MAC `AA:BB:CC:DD:EE:FF`, normally `enabled='0'`) was
-   enabled, so that one host — and only that host — bypassed Passwall2.
+1. A Passwall2 `acl_rule` matching the test host's MAC (normally `enabled='0'`)
+   was enabled, so that one host — and only that host — bypassed Passwall2.
 2. The nftables rules were installed with `--scope-ip 192.168.1.120`, so both the
    redirect and the QUIC drop carried `ip saddr 192.168.1.120`.
 

@@ -14,11 +14,22 @@ uci() {
 }
 assert_eq "$(pw2_shunt_id)" "ABCD1234" "discovers the global shunt id"
 
-# --- the reference router's id must NOT be hardcoded anywhere ---
-case "$(cat "$ROOT/lib/mode_passwall2.sh")" in
-	*SHUNTID0*) t_fail "no hardcoded shunt id in mode_passwall2.sh" ;;
-	*)          t_pass "no hardcoded shunt id in mode_passwall2.sh" ;;
-esac
+# --- the shunt id must be discovered at runtime, never hardcoded ---
+# The reference router's actual shunt section name is private and deliberately
+# does not appear in this repository. Set FORBIDDEN_SHUNT_ID to your own
+# router's id to run the strict literal check locally before publishing.
+PW2_SRC=$(cat "$ROOT/lib/mode_passwall2.sh")
+assert_contains "$PW2_SRC" 'uci -q get passwall2.@global[0].node' \
+	"shunt id is discovered from uci at runtime"
+
+if [ -n "${FORBIDDEN_SHUNT_ID:-}" ]; then
+	case "$PW2_SRC" in
+		*"$FORBIDDEN_SHUNT_ID"*) t_fail "no hardcoded shunt id in mode_passwall2.sh" ;;
+		*)                       t_pass "no hardcoded shunt id in mode_passwall2.sh" ;;
+	esac
+else
+	t_pass "no hardcoded shunt id (set FORBIDDEN_SHUNT_ID for the strict check)"
+fi
 
 # --- global node is a plain node, not a shunt: must refuse ---
 uci() {

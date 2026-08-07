@@ -92,9 +92,9 @@ core, 20 open connections.
 
 The bare `https://www.instagram.com` fetch returned 000 while the pinned fetches
 returned 200. Cause: the test client had a second DNS path. A WireGuard adapter
-(`wt0`, Up) advertised its own resolver `redacted`, so some lookups were
-answered off-router. Those answers never reach dnsmasq, so their addresses never
-enter `xrayfrag4`, so the connection is never redirected and hits the block.
+was up and advertising its own resolver, so some lookups were answered
+off-router. Those answers never reach dnsmasq, so their addresses never enter
+`xrayfrag4`, so the connection is never redirected and hits the block.
 
 Routing was not the problem — `Find-NetRoute` confirmed 157.240.253.174 egressed
 via Ethernet → 192.168.1.1. Only resolution leaked.

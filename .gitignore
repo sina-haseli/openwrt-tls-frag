@@ -1,2 +1,4 @@
-﻿reference/
+reference/
 *.bak
+*.bak-*
+tests/.tmp/

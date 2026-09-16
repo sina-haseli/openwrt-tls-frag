@@ -17,29 +17,43 @@ only a local process that changes *how* the first few bytes are written.
 
 ## The fragment parameters
 
-Two stacked stages, in `streamSettings.finalmask.tcp` on a `direct` outbound:
+Two stacked stages, in `streamSettings.finalmask.tcp` on a `direct` outbound.
+There are two profiles, `a` and `b`, selectable with `--frag` at install time
+(`a` is the default):
 
 ```json
+// fragA / low_delay
 [
-  { "type": "fragment", "settings": { "packets": "tlshello", "lengths": ["5", "1"], "delays": ["0"], "maxSplit": "0" } },
-  { "type": "fragment", "settings": { "packets": "1-1", "lengths": ["43", "1"], "delays": ["1"], "maxSplit": "522" } }
+  { "type": "fragment", "settings": { "packets": "tlshello", "lengths": ["6", "98", "1"], "delays": ["0"], "maxSplit": "0" } },
+  { "type": "fragment", "settings": { "packets": "1-1", "lengths": ["114", "1"], "delays": ["1"], "maxSplit": "11" } }
+]
+
+// fragB / high_delay
+[
+  { "type": "fragment", "settings": { "packets": "tlshello", "lengths": ["0", "104", "1"], "delays": ["0"], "maxSplit": "0" } },
+  { "type": "fragment", "settings": { "packets": "1-1", "lengths": ["114", "1"], "delays": ["1"], "maxSplit": "11" } }
 ]
 ```
 
 | Field | Meaning |
 |---|---|
 | `packets` | which writes to fragment. `tlshello` = the TLS ClientHello only. `1-1` = the first write only. |
-| `lengths` | chunk size range, in bytes, as `[min, max]`. `["5","1"]` is a degenerate range meaning fixed tiny chunks. |
-| `delays` | milliseconds to wait between chunks. `1` forces the chunks into separate TCP segments rather than being coalesced. |
-| `maxSplit` | cap on how many splits are performed. `"0"` = unlimited. |
+| `lengths` | size in bytes of each successive fragment. The *n*-th element is the *n*-th fragment; the last element keeps applying to every later fragment. An element may be `0` (any but the last): no bytes are split off that round, it just waits out the matching delay. |
+| `delays` | milliseconds to wait after each fragment. The last element repeats. `1` forces the pieces into separate TCP segments rather than being coalesced. |
+| `maxSplit` | cap on splits from one packet. `0` = unlimited. |
 
 Stage one shreds the ClientHello itself. Stage two re-splits the resulting first
 write with a 1 ms delay, which is what actually guarantees the pieces leave as
 distinct segments instead of being merged by the kernel.
 
-**These values are load-bearing. Copy them byte-for-byte.** They are duplicated
-in both `files/etc/xray-frag/config.passwall2.json` and
-`files/etc/xray-frag/config.standalone.json` — if you change one, change both.
+The two profiles differ only in stage one: fragA splits off 6 bytes then 98;
+fragB splits off nothing first (`0`) then 104. Try the other if one profile is
+unreliable on your line — that is the whole point of shipping both.
+
+**These values are load-bearing. Copy them byte-for-byte.** Each profile lives
+in exactly one file — `files/etc/xray-frag/frag-a.json` or `frag-b.json` — and
+is substituted into both mode templates at install time, so the two modes cannot
+drift apart.
 
 ### Why mild parameters are worse than none
 
@@ -189,7 +203,7 @@ mean anything.
 
 The fragment parameters are from
 [patterniha/Serverless-for-Iran](https://github.com/patterniha/Serverless-for-Iran)
-(GPL-3.0), specifically its `Serverless-v48-low_delay` v2rayN configuration,
-which works on Windows against the same ISPs. Everything above is an explanation
+(GPL-3.0), specifically its v50 `Serverless-fragA` and `Serverless-fragB`
+configurations, which work on Windows against the same ISPs. Everything above is an explanation
 of *why* those values work and how to carry them onto OpenWrt — the values
 themselves are that project's contribution.

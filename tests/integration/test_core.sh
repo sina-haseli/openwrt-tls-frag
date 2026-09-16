@@ -7,7 +7,7 @@ set -u
 SRC="$ROOT/files"
 
 # --- install in passwall2 mode ---
-core_install passwall2 "$SRC"
+core_install passwall2 "$SRC" a
 
 assert_ok "config.json installed"        test -f /etc/xray-frag/config.json
 assert_ok "init script installed"        test -x /etc/init.d/xray-frag
@@ -17,19 +17,28 @@ assert_ok "process running"              core_is_running
 
 assert_contains "$(cat /etc/xray-frag/config.json)" '"socks-in"' \
 	"passwall2 mode installs the socks config"
-assert_contains "$(cat /etc/xray-frag/config.json)" '"maxSplit": "522"' \
-	"fragment stage 2 present"
+assert_contains "$(cat /etc/xray-frag/config.json)" '"lengths": ["6", "98", "1"]' \
+	"fragment profile a stage 1 present"
+assert_contains "$(cat /etc/xray-frag/config.json)" '"maxSplit": "11"' \
+	"fragment profile a stage 2 present"
 
 sleep 1
 assert_contains "$(netstat -ln 2>/dev/null)" "127.0.0.1:10808" \
 	"socks port is listening"
 
 # --- install is idempotent ---
-core_install passwall2 "$SRC"
+core_install passwall2 "$SRC" a
 assert_ok "still running after re-install" core_is_running
 
+# --- switching fragment profile swaps the stages, not the mode ---
+core_install passwall2 "$SRC" b
+assert_contains "$(cat /etc/xray-frag/config.json)" '"socks-in"' \
+	"profile switch keeps the socks inbound"
+assert_contains "$(cat /etc/xray-frag/config.json)" '"lengths": ["0", "104", "1"]' \
+	"fragment profile b stage 1 present"
+
 # --- switching mode swaps the config ---
-core_install standalone "$SRC"
+core_install standalone "$SRC" a
 assert_contains "$(cat /etc/xray-frag/config.json)" '"redir-in"' \
 	"standalone mode installs the dokodemo config"
 

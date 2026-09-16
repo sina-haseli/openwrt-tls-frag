@@ -14,9 +14,9 @@ since 2026-08-06.
 
 The fragment parameters come from
 **[patterniha/Serverless-for-Iran](https://github.com/patterniha/Serverless-for-Iran)**
-(GPL-3.0), by way of its `Serverless-v48-low_delay` v2rayN configuration. Those
-specific values are the whole trick — this project would not exist without that
-work. If this is useful to you, go star that repository.
+(GPL-3.0), by way of its v50 `Serverless-fragA` / `Serverless-fragB`
+configurations. Those specific values are the whole trick — this project would
+not exist without that work. If this is useful to you, go star that repository.
 
 What this project adds is packaging: an OpenWrt installer, Passwall2
 integration, a standalone transparent-proxy mode, and verification that actually
@@ -93,6 +93,7 @@ Options:
 | Flag | Effect |
 |---|---|
 | `--mode auto\|passwall2\|standalone` | default `auto` |
+| `--frag a\|b` | fragment profile; `a` (default) is fragA/low_delay, `b` is fragB/high_delay. Try `b` if `a` is unreliable. |
 | `--scope-ip <ip>` | standalone only — apply rules to one source IP. For isolated testing. |
 | `--no-verify` | skip the post-install check (not recommended) |
 | `--no-stats` | do not install the one-minute stats sampler |

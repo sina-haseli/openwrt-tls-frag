@@ -12,6 +12,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 STATE_FILE=/etc/xray-frag/.install-state
 
 MODE=auto
+FRAG=a
 SCOPE_IP=""
 DO_VERIFY=1
 DO_STATS=1
@@ -24,6 +25,9 @@ Usage: ./install.sh [options]
 
   --mode auto|passwall2|standalone
                     auto (default) uses passwall2 if installed, else standalone
+  --frag a|b        fragment profile, from patterniha/Serverless-for-Iran v50.
+                    "a" (default) is fragA/low_delay, "b" is fragB/high_delay.
+                    Try b if a is unreliable on your line.
   --scope-ip <ip>   standalone only: apply rules to this source IP only.
                     Intended for isolated testing, not normal use.
   --no-verify       skip the post-install differential check (not recommended)
@@ -37,6 +41,7 @@ USAGE
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--mode)      MODE="${2:-}"; shift 2 ;;
+		--frag)      FRAG="${2:-}"; shift 2 ;;
 		--scope-ip)  SCOPE_IP="${2:-}"; shift 2 ;;
 		--no-verify) DO_VERIFY=0; shift ;;
 		--no-stats)  DO_STATS=0; shift ;;
@@ -48,6 +53,11 @@ done
 case "$MODE" in
 	auto|passwall2|standalone) : ;;
 	*) usage; die "unknown mode: $MODE" ;;
+esac
+
+case "$FRAG" in
+	a|b) : ;;
+	*) usage; die "unknown fragment profile: $FRAG (expected a or b)" ;;
 esac
 
 require_root
@@ -90,7 +100,7 @@ else
 	sa_requirements
 fi
 
-core_install "$MODE" "$HERE/files"
+core_install "$MODE" "$HERE/files" "$FRAG"
 
 if [ "$MODE" = "passwall2" ]; then
 	pw2_install "$SHUNT"
@@ -103,11 +113,12 @@ fi
 mkdir -p /etc/xray-frag
 {
 	echo "MODE=$MODE"
+	echo "FRAG=$FRAG"
 	echo "BACKUP=$BACKUP"
 	echo "SCOPE=$SCOPE_IP"
 } > "$STATE_FILE"
 
-log_info "installed in $MODE mode"
+log_info "installed in $MODE mode (frag profile $FRAG)"
 
 if [ "$DO_VERIFY" -eq 1 ]; then
 	if [ "$MODE" = "standalone" ]; then
